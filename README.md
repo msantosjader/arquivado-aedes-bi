@@ -23,6 +23,8 @@ uv run python mapa_areas.py --ano-inicio 2024 --ano-fim 2026
 
 Use `--refresh` apenas para criar um novo snapshot da API.
 
+O escopo analítico para H3, EDLs, ovitrampas, clima e modelagem está em [`docs/escopo-analitico.md`](docs/escopo-analitico.md).
+
 ### Indicadores
 
 `percentual_abastecimento_calendario` é calculado pela união dos intervalos do calendário (`layer 5`) dentro do mês, dividida pelo total de horas do mês. Intervalos sobrepostos não são contados duas vezes.
