@@ -16,7 +16,17 @@ O objetivo inicial é medir associações espaciais e temporais. Qualquer uso pr
 
 O H3 será a unidade espacial analítica principal. Bairros serão usados como rótulos para leitura e visualização, não como a única unidade de análise.
 
-As EDLs serão representadas por pontos e por áreas de influência circulares, com raio baseado em estudos. O raio será uma hipótese de trabalho e poderá ser testado em cenários diferentes.
+As EDLs serão representadas por pontos e por áreas de influência circulares. O
+mapa permitirá selecionar um raio de 0 a 500 m, com 400 m como cenário
+operacional principal. A escolha de 400 m é informada por material da Fiocruz
+que relata disseminação efetiva até essa distância em ensaios de campo
+(Abad-Franch et al., 2015; 2017). Isso não equivale automaticamente ao raio
+de eficácia das EDLs no Recife. Os buffers serão chamados de áreas
+operacionais presumidas, e não de eficácia local comprovada.
+
+As sensibilidades analíticas iniciais serão 50, 100, 150, 200, 300, 400 e
+500 m. A análise deve preservar o raio como hipótese operacional e validar sua
+adequação com dados e especialistas da GEVACZ.
 
 As ovitrampas serão associadas à célula H3 que contém cada coordenada. A resolução H3 inicial será avaliada entre:
 
@@ -86,6 +96,19 @@ dias_manutencao
 
 O período deverá respeitar a frequência real das coletas de ovitrampas e EDLs. Não serão criados valores semanais ou mensais sem documentar a regra de agregação.
 
+## Ciclos e Defasagens
+
+As ovitrampas serão analisadas na frequência real de coleta. A linha do tempo
+principal usará `ano + ciclo`, e não o mês do mapa da COMPESA.
+
+Para cada observação, serão calculadas janelas anteriores à coleta de 7, 14,
+21 e 28 dias. O dia da coleta fica fora da janela para evitar vazamento
+temporal. Chuva será acumulada, temperatura será resumida por média e
+abastecimento será resumido por horas e dias sem abastecimento.
+
+O mapa permite selecionar o ciclo e a janela ambiental. Essa seleção visual
+não substitui a geração de todas as janelas na tabela analítica.
+
 ## Modelagem Posterior
 
 Antes de modelos preditivos, serão avaliadas associações com defasagens de 7, 14, 21 e 28 dias para chuva, temperatura e abastecimento.
@@ -93,6 +116,40 @@ Antes de modelos preditivos, serão avaliadas associações com defasagens de 7,
 As respostas possíveis incluem contagem de ovos, positividade e outros indicadores definidos pela estrutura das ovitrampas. Modelos de contagem, como Poisson ou binomial negativa, poderão ser considerados quando houver volume suficiente de observações.
 
 A validação deverá respeitar tempo e espaço. Uma divisão aleatória simples pode produzir resultados otimistas por colocar células ou períodos relacionados em treino e teste.
+
+## Análise EDL-Ovitrampa
+
+Cada observação de ovitrampa poderá receber a distância até a EDL mais próxima,
+a quantidade de EDLs próximas e indicadores para os raios de 50, 100, 150,
+200, 300, 400 e 500 m. A comparação inicial será entre quantidade de ovos,
+positividade e distribuição dos registros próximos e distantes de EDLs.
+
+Sem datas de instalação, ativação e manutenção das EDLs, essa comparação será
+interpretada como associação espacial exploratória. Não será apresentada como
+efeito causal, eficácia ou análise antes/depois.
+
+Quando a data de instalação estiver disponível, a análise poderá distinguir
+observações anteriores e posteriores à instalação:
+
+```text
+instalada_ate_coleta = data_instalacao <= data_coleta
+```
+
+Datas informadas apenas como mês/ano serão tratadas como aproximações e não
+como dias exatos. A data de instalação indica o início registrado da operação,
+mas não confirma ativação, manutenção ou permanência da EDL. Comparações
+temporais deverão considerar uma defasagem biológica de 3 a 6 semanas e manter
+as observações sem data em categoria separada.
+
+As distâncias são calculadas em metros após reprojeção para o sistema métrico
+EPSG:31985. Para cada ovitrampa, a EDL mais próxima é identificada e sua data
+de instalação é associada à observação. A distância não é calculada usando
+latitude/longitude diretamente.
+
+Na visualização temporal, EDLs com data de instalação posterior à referência do
+ciclo ficam ocultas até sua instalação registrada. EDLs sem data permanecem
+visíveis como desconhecidas; essa escolha evita interpretar dado ausente como
+inexistência da estação.
 
 ## Hipóteses a Reavaliar
 

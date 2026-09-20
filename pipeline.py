@@ -289,6 +289,50 @@ def build_monthly(year, areas, periods, services, out):
     return result
 
 
+def build_daily(year, areas, periods, services, out):
+    """Expande os intervalos de abastecimento para uma linha por área e dia."""
+    area_attrs = {a["attributes"]["ID"]: a["attributes"] for a in areas}
+    area_ids = set(area_attrs)
+    period_map = {area_id: [] for area_id in area_ids}
+    for feature in periods:
+        attr = feature["attributes"]
+        if attr.get("ID") in area_ids and attr.get("colapso", 0) == 0:
+            period_map[attr["ID"]].append((attr.get("Inicio"), attr.get("Termino")))
+    service_map = {area_id: [] for area_id in area_ids}
+    for feature in services:
+        attr = feature["attributes"]
+        if attr.get("ID_AREA_ABASTECIMENTO") in area_ids:
+            service_map[attr["ID_AREA_ABASTECIMENTO"]].append(attr)
+
+    rows = []
+    for day in pd.date_range(f"{year}-01-01", f"{year}-12-31", freq="D"):
+        start = pd.Timestamp(day, tz="UTC")
+        end = start + pd.Timedelta(days=1)
+        start_ms, end_ms = start.value // 10**6, end.value // 10**6
+        for area_id, attrs in area_attrs.items():
+            intervals = [(int(a), int(b)) for a, b in period_map[area_id] if a is not None and b is not None]
+            events = [event for event in service_map[area_id]
+                      if event.get("INICIO_PREVISTO", 0) < end_ms and event.get("TERMINO_PREVISTO", 0) > start_ms]
+            hours = union_hours(intervals, start_ms, end_ms)
+            rows.append({
+                "area_id": area_id,
+                "data": day.date().isoformat(),
+                "ano": year,
+                "mes": day.month,
+                "horas_abastecimento": round(hours, 4),
+                "horas_sem_abastecimento": round(max(24 - hours, 0), 4),
+                "percentual_abastecimento": round(100 * hours / 24, 4),
+                "sem_abastecimento": hours == 0,
+                "abastecimento_integral": hours >= 24 - 1e-6,
+                "manutencao_programada": bool(events),
+                "qualidade_dado": "completo" if intervals else "sem_periodos",
+                "municipio": attrs.get("MUNICIPIOS"),
+            })
+    result = pd.DataFrame(rows)
+    write_table(result, out / "analytics" / "diario" / f"abastecimento_{year}.parquet")
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ano", type=int, default=2026)
@@ -329,8 +373,9 @@ def main():
     utc_dates(curated_services, ["INICIO_PREVISTO", "TERMINO_PREVISTO"])
     write_table(curated_services, args.out / "curated" / "servicos_recife" / f"servicos_{args.ano}.parquet")
     monthly = build_monthly(args.ano, areas, periods, services, args.out)
+    daily = build_daily(args.ano, areas, periods, services, args.out)
     print(f"áreas Recife: {len(area_ids)} | períodos: {len(periods)} | serviços: {len(services)}")
-    print(f"indicadores mensais: {len(monthly)}")
+    print(f"indicadores mensais: {len(monthly)} | diários: {len(daily)}")
 
 
 if __name__ == "__main__":
