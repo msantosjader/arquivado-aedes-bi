@@ -11,9 +11,9 @@ import pandas as pd
 import requests
 from shapely.geometry import shape
 
-API = "https://archive-api.open-meteo.com/v1/archive"
+API = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 TIMEZONE = "America/Recife"
-MODEL = "ecmwf_ifs025"
+MODEL = "ecmwf_ifs"
 BATCH_SIZE = 50
 DAILY_VARIABLES = ",".join([
     "temperature_2m_mean",
@@ -40,7 +40,7 @@ def area_points(path):
 def weather_points(path):
     groups = {}
     for point in area_points(path):
-        key = (round(point["latitude"] * 4) / 4, round(point["longitude"] * 4) / 4)
+        key = (round(point["latitude"] * 10) / 10, round(point["longitude"] * 10) / 10)
         groups.setdefault(key, []).append(point["area_id"])
     return [
         {"area_ids": area_ids, "latitude": latitude, "longitude": longitude}
@@ -116,7 +116,7 @@ def run(year, data, refresh=False):
     records = []
     for offset in range(0, len(points), BATCH_SIZE):
         batch = points[offset:offset + BATCH_SIZE]
-        path = data / "raw" / "open_meteo" / f"clima_grid_{year}_{offset // BATCH_SIZE:02d}.json.gz"
+        path = data / "raw" / "open_meteo" / f"clima_hres_{year}_{offset // BATCH_SIZE:02d}.json.gz"
         records.append(fetch_batch(path, batch, start, end, refresh))
 
     daily = pd.DataFrame([row for record in records for row in daily_rows(record)])

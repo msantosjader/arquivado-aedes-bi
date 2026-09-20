@@ -28,9 +28,9 @@ Use `--refresh` apenas para criar um novo snapshot da API.
 
 ### Clima
 
-`clima.py` consulta temperatura e precipitação diárias do Open-Meteo para a grade meteorológica que cobre as áreas COMPESA. A API retorna a célula meteorológica efetivamente utilizada; essa localização é preservada em `weather_lat` e `weather_lon`.
+`clima.py` consulta temperatura e precipitação diárias do Historical Forecast do Open-Meteo, usando o ECMWF IFS HRES em aproximadamente 9 km. A API retorna a célula meteorológica efetivamente utilizada; essa localização é preservada em `weather_lat` e `weather_lon`.
 
-O mapa começa apenas com o mapa-base. As camadas de abastecimento e clima são ativadas separadamente. A camada climática permite alternar entre temperatura média e chuva acumulada, mantendo a resolução meteorológica da fonte em vez de criar uma resolução H3 artificial.
+O mapa começa apenas com o mapa-base. As camadas de abastecimento, temperatura e chuva são ativadas separadamente e podem ficar visíveis ao mesmo tempo. As células meteorológicas são recortadas pelo limite do Recife, mantendo a resolução da fonte em vez de criar uma resolução H3 artificial.
 
 O escopo analítico para H3, EDLs, ovitrampas, clima e modelagem está em [`docs/escopo-analitico.md`](docs/escopo-analitico.md).
 

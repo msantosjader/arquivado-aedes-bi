@@ -39,7 +39,7 @@ O cálculo considera a união dos intervalos para não contar sobreposições du
 
 ## Clima
 
-A primeira fonte será o Open-Meteo com o modelo meteorológico ECMWF IFS. A consulta deverá preservar a coordenada/célula meteorológica retornada pela fonte.
+A primeira fonte será o Historical Forecast do Open-Meteo com o modelo ECMWF IFS HRES, em aproximadamente 9 km. A consulta deverá preservar a coordenada/célula meteorológica retornada pela fonte.
 
 A grade meteorológica será mantida separada da grade H3. O H3 pode ter células de centenas de metros, enquanto o clima terá resolução aproximada de quilômetros. Não será criada precisão artificial por interpolação.
 
