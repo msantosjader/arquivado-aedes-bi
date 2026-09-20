@@ -22,6 +22,19 @@ Saídas principais:
 - `data/analytics/clima/`: clima diário e mensal tratado;
 - `data/mapa_recife.html`: mapa com slider mensal e camadas opcionais.
 - `data/curated/gevacz/`: EDLs, ovitrampas e observações normalizadas.
+- `data/curated/gevacz/observacoes_h3.parquet`: agregações H3 nas resoluções 8 e 9.
+- `data/curated/gevacz/h3_diagnostico.parquet`: diagnóstico de distribuição das células H3.
+- `data/curated/gevacz/auditoria_georreferenciamento.xlsx`: comparação completa entre Excel e shapefiles de ovitrampas.
+
+O mapa inclui a camada H3 na resolução 8. A cor das células representa a média
+de ovos em escala logarítmica no ciclo selecionado; positividade aparece como
+indicador secundário no popup. A resolução 9 permanece como
+saída analítica para sensibilidade e maior detalhe espacial.
+
+O mapa inclui pontos municipais válidos, pontos até 500 m da fronteira
+(`fora_recife_proxima`) e pontos sem interseção com áreas COMPESA
+(`sem_area_compesa`). A auditoria temporal e espacial fica em
+`data/curated/gevacz/auditoria_georreferenciamento.xlsx`.
 
 O mapa usa todos os anos disponíveis por padrão. Para limitar o intervalo:
 
