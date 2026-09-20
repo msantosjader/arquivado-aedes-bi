@@ -5,6 +5,7 @@ O pipeline salva o retorno bruto em `JSONL.gz`, trata os períodos e serviços e
 ```bash
 uv sync
 uv run python pipeline.py --ano 2026
+uv run python clima.py --ano 2024 --ano 2025 --ano 2026
 uv run python mapa_areas.py
 ```
 
@@ -13,7 +14,9 @@ Saídas principais:
 - `data/raw/compesa/`: cache bruto da API;
 - `data/curated/`: períodos e serviços padronizados;
 - `data/analytics/mensal/`: indicadores mensais em Parquet;
-- `data/mapa_recife.html`: mapa com slider mensal e seletor de ano.
+- `data/raw/open_meteo/`: respostas brutas do Open-Meteo;
+- `data/analytics/clima/`: clima diário e mensal tratado;
+- `data/mapa_recife.html`: mapa com slider mensal e camadas opcionais.
 
 O mapa usa todos os anos disponíveis por padrão. Para limitar o intervalo:
 
@@ -22,6 +25,14 @@ uv run python mapa_areas.py --ano-inicio 2024 --ano-fim 2026
 ```
 
 Use `--refresh` apenas para criar um novo snapshot da API.
+
+### Clima
+
+`clima.py` consulta temperatura e precipitação diárias do Historical Forecast do Open-Meteo, usando o ECMWF IFS HRES em aproximadamente 9 km. A API retorna a célula meteorológica efetivamente utilizada; essa localização é preservada em `weather_lat` e `weather_lon`.
+
+O mapa começa apenas com o mapa-base. As camadas de abastecimento, temperatura e chuva são ativadas separadamente e podem ficar visíveis ao mesmo tempo. As células meteorológicas são recortadas pelo limite do Recife, mantendo a resolução da fonte em vez de criar uma resolução H3 artificial.
+
+A grade climática é descoberta a partir do município inteiro, independentemente da distribuição das áreas COMPESA. Para visualizar a cobertura contínua, cada célula municipal recebe o valor da célula meteorológica HRES mais próxima; essa atribuição é uma aproximação espacial da fonte e não uma medição de bairro.
 
 O escopo analítico para H3, EDLs, ovitrampas, clima e modelagem está em [`docs/escopo-analitico.md`](docs/escopo-analitico.md).
 
