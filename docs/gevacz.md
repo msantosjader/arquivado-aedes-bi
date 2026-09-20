@@ -21,6 +21,8 @@ alterados pelo pipeline.
   COMPESA ou sem coordenada válida.
 - `auditoria_ids_ovitrampas.parquet`: IDs históricos sem correspondência
   geográfica e situação de cada ID.
+- `auditoria_georreferenciamento.xlsx`: comparação completa entre o Excel de
+  georreferenciamento e os shapefiles de ovitrampas 2026.
 
 Todas as tabelas preservam `arquivo_origem`. As observações preservam também
 `aba_origem`.
@@ -50,6 +52,16 @@ e não substitui a confirmação do código operacional pela GEVACZ.
 Ovitrampas: `id_ovt`, `bairro`, `latitude`, `longitude`, `endereco` e
 `id_ovt_chave`, `qualidade_coordenada` e `qualidade_geografica`.
 
+Quando existe um ID único no conjunto `ATUALIZAÇÃO TOTAL DAS OVITRAMPAS 2026
+shapefile`, a geometria do shapefile é usada como fonte espacial preferencial.
+As coordenadas do Excel permanecem em `latitude_original` e
+`longitude_original`, com a origem registrada em `fonte_coordenada`.
+
+O Excel de auditoria possui abas para resumo, comparação entre fontes,
+coordenadas confirmadas pelo shapefile, pendências geográficas e IDs sem
+correspondência no shapefile. Também registra distância entre as coordenadas e
+conflitos quando um ID aparece com mais de uma geometria.
+
 `id_ovt_chave` remove espaços e pontuação para relacionar, por exemplo,
 `BVS 1015` na localização com `BVS1015` nas observações. O ID original é
 preservado para exibição.
@@ -60,11 +72,49 @@ Observações: `id_ovt`, `ano`, `ciclo`, `data_coleta`, `data_leitura`,
 Na tabela `observacoes_analiticas.parquet`, a relação temporal com a EDL mais
 próxima inclui `edl_mais_proxima_id`, `data_instalacao_edl`,
 `qualidade_data_instalacao_edl` e `instalada_ate_coleta`. Também são gerados
-indicadores espaciais para 50, 100, 150, 200, 300, 400 e 500 m.
+indicadores espaciais para 50, 100, 150, 200, 300, 400 e 500 m. A distância
+`distancia_edl_ativa_m` considera apenas EDLs com data de instalação conhecida e
+anterior ou igual à coleta; as colunas `edl_ativa_a_*` representam essas faixas.
+
+## Camada H3
+
+`gevacz.py` gera `observacoes_h3.parquet` com agregações por célula H3, ano e
+ciclo, nas resoluções 8 e 9. A tabela contém observações, ovitrampas, ovos,
+positividade, médias e mediana de ovos, contexto EDL, chuva, temperatura e
+abastecimento quando esses campos existem na base analítica.
+
+Também é gerado `h3_diagnostico.parquet`, com quantidade de células, média e
+mediana de observações por célula e proporção de células com menos de cinco
+observações. Esse diagnóstico orienta a escolha entre resolução 8 e 9; não há
+uma resolução definitiva assumida antes dessa verificação.
+
+Na execução atual, incluindo pontos até 500 m da fronteira e pontos sem área
+COMPESA, a resolução 8 produziu 9.727 células e 19,9% delas tinham menos de
+cinco observações. A resolução 9 produziu 45.365 células e 88,0% tinham menos
+de cinco observações. Por isso, a resolução 8 é a camada H3 principal do mapa;
+a resolução 9 permanece disponível para análises de maior detalhe, com a
+ressalva de maior instabilidade por célula.
+
+O H3 é uma camada de agregação e indexação. As distâncias EDL continuam sendo
+calculadas em metros no sistema EPSG:31985 antes da agregação, sem substituir a
+distância métrica por uma aproximação de célula.
+
+A malha H3 permanece fixa e não é centralizada nas EDLs. A camada do mapa usa
+`ovos_media` em escala logarítmica como intensidade principal; positividade é
+mantida no popup como indicador secundário porque está saturada nos dados
+disponíveis (aproximadamente 98,5%). A análise de exposição usa a distância
+exata e faixas de 0--100, 100--200, 200--300, 300--400, 400--500 e >500 m.
 
 O ano de origem e o ano da data são mantidos separadamente. Datas fora do ano
 do arquivo são comparadas com os registros vizinhos e classificadas em
-`qualidade_data`; elas não são corrigidas silenciosamente.
+`qualidade_data`; as correções de alta confiança ficam registradas na auditoria.
+
+Nos arquivos de 2025, datas de 2026 nos ciclos 1--23 são corrigidas para 2025
+quando a regra de sequência do ciclo é aplicável. Datas fora da faixa plausível
+(como anos 1900, 2037 ou 5625) permanecem na origem, mas não entram na data
+corrigida usada pela linha do tempo. As regras e linhas afetadas ficam em
+`auditoria_georreferenciamento.xlsx`, nas abas `datas_ciclos` e
+`correcoes_datas`.
 
 ## Ciclos e janelas ambientais
 
@@ -100,6 +150,21 @@ depende do tipo de estação, produto, manutenção, densidade e comportamento d
 mosquitos. Até existir protocolo ou evidência local da GEVACZ, o mapa e a
 análise devem chamar esses buffers de `área operacional presumida`, nunca de
 área de eficácia comprovada.
+
+Para a fronteira municipal, pontos até 500 m fora do limite são classificados
+como `fora_recife_proxima` e entram na visualização e no H3, mantendo a exceção
+registrada. Pontos mais distantes permanecem pendentes. Pontos
+`sem_area_compesa` também entram no mapa e no H3 porque possuem localização
+municipal; apenas o contexto de abastecimento fica indisponível.
+
+## Modelagem
+
+`n_ovos` é uma contagem sem limite superior fixo. A primeira especificação deve
+usar Poisson como baseline e binomial negativa NB2 como modelo principal, dada a
+sobredispersão observada. ZNIB (`Zero- and N-Inflated Binomial`) só é apropriado
+para uma resposta limitada entre zero e um `N` conhecido, como palhetas
+positivas sobre palhetas examinadas. Não deve ser aplicado diretamente a
+`n_ovos` sem confirmar a semântica de `QT` e o denominador experimental.
 
 ## Instalação e exposição temporal
 

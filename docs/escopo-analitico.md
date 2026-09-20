@@ -33,7 +33,7 @@ As ovitrampas serão associadas à célula H3 que contém cada coordenada. A res
 - resolution 9, para maior detalhe;
 - resolution 8, quando a quantidade de observações por célula for pequena.
 
-Uma célula com poucos registros poderá ser agregada a uma resolução mais ampla para reduzir instabilidade estatística.
+Uma célula com poucos registros poderá ser agregada a uma resolução mais ampla para reduzir instabilidade estatística. Na primeira avaliação da base, a resolução 8 será a referência operacional e a resolução 9 será tratada como sensibilidade de maior detalhe.
 
 ## Abastecimento
 
@@ -113,16 +113,36 @@ não substitui a geração de todas as janelas na tabela analítica.
 
 Antes de modelos preditivos, serão avaliadas associações com defasagens de 7, 14, 21 e 28 dias para chuva, temperatura e abastecimento.
 
-As respostas possíveis incluem contagem de ovos, positividade e outros indicadores definidos pela estrutura das ovitrampas. Modelos de contagem, como Poisson ou binomial negativa, poderão ser considerados quando houver volume suficiente de observações.
+`n_ovos` será a resposta principal da primeira modelagem. Positividade será
+indicador secundário, pois está saturada nos dados disponíveis e não diferencia
+adequadamente as células. A análise espacial usará uma malha H3 fixa, sem
+centralizar células nas EDLs, combinada com distância métrica e faixas de
+0--100, 100--200, 200--300, 300--400, 400--500 e >500 m até a EDL ativa.
+Modelos de contagem, como Poisson ou binomial negativa, poderão ser considerados
+após verificar dispersão e volume suficiente de observações.
+
+### ZNIB
+
+ZNIB (`Zero- and N-Inflated Binomial`) exige uma resposta binomial limitada
+entre zero e um `N` conhecido, com excesso estrutural nos extremos. Não deve ser
+aplicado diretamente a `n_ovos`, que é uma contagem sem limite superior fixo.
+Poderá ser avaliado para proporções ou contagens como palhetas positivas sobre
+palhetas examinadas, mas somente após confirmar o significado de `QT` e a
+existência de um denominador experimental por observação.
+
+ZINB também não é o modelo inicial para `n_ovos`: a proporção de zeros observada
+é baixa. Será no máximo uma análise de sensibilidade se os resíduos do modelo
+binomial negativo mostrarem excesso de zeros após as covariáveis.
 
 A validação deverá respeitar tempo e espaço. Uma divisão aleatória simples pode produzir resultados otimistas por colocar células ou períodos relacionados em treino e teste.
 
 ## Análise EDL-Ovitrampa
 
-Cada observação de ovitrampa poderá receber a distância até a EDL mais próxima,
-a quantidade de EDLs próximas e indicadores para os raios de 50, 100, 150,
-200, 300, 400 e 500 m. A comparação inicial será entre quantidade de ovos,
-positividade e distribuição dos registros próximos e distantes de EDLs.
+Cada observação de ovitrampa recebe a distância até a EDL mais próxima, a
+distância até a EDL ativa mais próxima e indicadores para os raios de 50, 100,
+150, 200, 300, 400 e 500 m. A comparação inicial será entre quantidade de ovos
+e distribuição dos registros nas faixas de distância. Positividade ficará como
+indicador descritivo.
 
 Sem datas de instalação, ativação e manutenção das EDLs, essa comparação será
 interpretada como associação espacial exploratória. Não será apresentada como
@@ -150,6 +170,11 @@ Na visualização temporal, EDLs com data de instalação posterior à referênc
 ciclo ficam ocultas até sua instalação registrada. EDLs sem data permanecem
 visíveis como desconhecidas; essa escolha evita interpretar dado ausente como
 inexistência da estação.
+
+Pontos até 500 m fora do limite municipal serão tratados como `fora_recife_proxima`
+e poderão entrar na visualização e na agregação H3. Pontos dentro do Recife, mas
+sem interseção com uma área COMPESA, serão incluídos espacialmente com
+abastecimento ausente, sem imputação desse contexto.
 
 ## Hipóteses a Reavaliar
 
