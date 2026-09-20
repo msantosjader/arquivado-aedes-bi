@@ -28,7 +28,24 @@ Todas as tabelas preservam `arquivo_origem`. As observações preservam também
 ## Campos principais
 
 EDLs: `edl_id`, `distrito_sanitario`, `bairro`, `nome_local`, `tipo_local`,
-`logradouro`, `latitude`, `longitude`, `edl_ideal` e `edl_real`.
+`logradouro`, `latitude`, `longitude`, `edl_ideal`, `edl_real`,
+`data_instalacao`, `data_instalacao_original` e `qualidade_data_instalacao`.
+
+`data_instalacao` é extraída da coluna `L` de `TOTAL DE EDL POR DS.xlsx` quando
+o conteúdo representa uma instalação. Datas completas preservam o dia. Textos
+que informam apenas mês e ano são normalizados para o primeiro dia do mês, mas
+recebem qualidade `mes_ano` e não são tratados como datas exatas. O texto bruto
+permanece em `data_instalacao_original`.
+
+Valores numéricos, células vazias e anotações que indicam retirada não são
+convertidos em instalação. A coluna `L` não tem o mesmo significado em todos os
+distritos; em alguns arquivos ela contém quantidade de EDL real. Por isso, a
+ausência de data não é interpretada como ausência de instalação.
+
+Linhas sem número operacional, mas com identificação de local ou coordenada,
+são preservadas com um identificador técnico baseado na linha da planilha
+(`DS{distrito}_R{linha}`). Esse identificador sinaliza uma limitação da origem
+e não substitui a confirmação do código operacional pela GEVACZ.
 
 Ovitrampas: `id_ovt`, `bairro`, `latitude`, `longitude`, `endereco` e
 `id_ovt_chave`, `qualidade_coordenada` e `qualidade_geografica`.
@@ -39,6 +56,11 @@ preservado para exibição.
 
 Observações: `id_ovt`, `ano`, `ciclo`, `data_coleta`, `data_leitura`,
 `quantidade_palhetas`, `n_ovos` e `status`.
+
+Na tabela `observacoes_analiticas.parquet`, a relação temporal com a EDL mais
+próxima inclui `edl_mais_proxima_id`, `data_instalacao_edl`,
+`qualidade_data_instalacao_edl` e `instalada_ate_coleta`. Também são gerados
+indicadores espaciais para 50, 100, 150, 200, 300, 400 e 500 m.
 
 O ano de origem e o ano da data são mantidos separadamente. Datas fora do ano
 do arquivo são comparadas com os registros vizinhos e classificadas em
@@ -79,6 +101,32 @@ mosquitos. Até existir protocolo ou evidência local da GEVACZ, o mapa e a
 análise devem chamar esses buffers de `área operacional presumida`, nunca de
 área de eficácia comprovada.
 
+## Instalação e exposição temporal
+
+As EDLs instaladas em 2026 são destacadas no mapa. EDLs com data registrada em
+outro período aparecem com destaque secundário, e EDLs sem data permanecem
+visíveis em estilo neutro. A data não é usada para inferir que uma EDL estava
+ativa durante todo o período.
+
+No mapa, uma EDL com data conhecida só é exibida quando a data de referência do
+ciclo selecionado é igual ou posterior à instalação. EDLs sem data permanecem
+visíveis porque não é possível concluir que ainda não existiam. Essa regra
+controla a visualização temporal, mas não substitui datas de ativação,
+manutenção ou retirada.
+
+Para uma observação de ovitrampa, a exposição temporal básica pode ser marcada
+por:
+
+```text
+instalada_ate_coleta = data_instalacao <= data_coleta
+```
+
+Essa regra só deve ser calculada quando a data for conhecida. Datas `mes_ano`
+indicam o início aproximado do mês e devem permanecer identificadas nas análises.
+O efeito biológico deve considerar uma defasagem posterior de 3 a 6 semanas;
+proximidade espacial e instalação anterior não constituem, sozinhas, evidência
+de eficácia causal.
+
 Referências de dispersão que orientam a hipótese, sem substituir validação
 local:
 
@@ -99,7 +147,9 @@ local:
   31.455 em 2026. Os números devem ser conferidos com a GEVACZ antes de análise
   substantiva.
 - A base atual não documenta de forma suficiente a data de instalação,
-  ativação, manutenção ou retirada de cada EDL.
+-  ativação, manutenção ou retirada de cada EDL. A coluna `L` fornece datas
+  parciais para parte dos distritos e agora é usada como evidência operacional
+  provisória, com qualidade registrada.
 - Há coordenadas em formatos inconsistentes, inclusive valores sem separador
   decimal e registros ausentes. O normalizador marca a qualidade, recupera
   apenas formatos numéricos não ambíguos e não corrige silenciosamente a

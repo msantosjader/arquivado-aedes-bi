@@ -32,6 +32,40 @@ def number(value):
         return None
 
 
+INSTALLATION_MONTHS = {
+    "janeiro": 1, "fevereiro": 2, "marco": 3, "abril": 4,
+    "maio": 5, "junho": 6, "julho": 7, "agosto": 8,
+    "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12,
+}
+
+
+def installation_date(value):
+    """Extrai a data da coluna L sem transformar observações em datas exatas."""
+    raw = text(value)
+    normalized = key(raw)
+    if not raw:
+        return pd.NaT, raw, "sem_data"
+    if "retir" in normalized:
+        return pd.NaT, raw, "retirada_ou_observacao"
+
+    full_date = re.search(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", raw)
+    if full_date:
+        day, month, year = map(int, full_date.groups())
+        return pd.Timestamp(year=year, month=month, day=day), raw, "data_exata"
+
+    iso_date = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", raw)
+    if iso_date:
+        year, month, day = map(int, iso_date.groups())
+        return pd.Timestamp(year=year, month=month, day=day), raw, "data_exata"
+
+    for month_name, month in INSTALLATION_MONTHS.items():
+        if re.search(rf"(?:^|_){month_name}(?:_|$)", normalized):
+            year = re.search(r"(?:^|_)(20\d{2})(?:_|$)", normalized)
+            if year:
+                return pd.Timestamp(year=int(year.group(1)), month=month, day=1), raw, "mes_ano"
+    return pd.NaT, raw, "sem_data"
+
+
 def coordinate(value, longitude=False):
     value = re.sub(r"(?<=\d)\.\s+(?=\d)", ".", text(value).replace(",", "."))
     match = re.search(r"-?\d+(?:\.\d+)?", value)
@@ -123,14 +157,16 @@ def read_edls(root):
             continue
         district = re.search(r"DS\s*(\d+)", sheet, re.I)
         district = district.group(1) if district else ""
-        for values in raw.iloc[row_index + 1 :].itertuples(index=False, name=None):
+        for row_number, values in enumerate(raw.iloc[row_index + 1 :].itertuples(index=False, name=None), start=row_index + 2):
             values = list(values) + [None] * 15
-            if number(values[0]) is None:
+            if number(values[0]) is None and not any(text(values[index]) for index in (4, 5, 7, 11)):
                 continue
             latitude, longitude = coordinates(values[7], values[8])
             real = number(values[11]) if number(values[11]) is not None else number(values[10])
+            data_instalacao, data_instalacao_original, qualidade_data_instalacao = installation_date(values[11])
+            edl_number = number(values[0])
             rows.append({
-                "edl_id": f"DS{district}_{int(number(values[0]))}",
+                "edl_id": f"DS{district}_{int(edl_number) if edl_number is not None else f'R{row_number}'}",
                 "distrito_sanitario": district,
                 "bairro": text(values[6]),
                 "nome_local": text(values[4]),
@@ -140,6 +176,9 @@ def read_edls(root):
                 "longitude": longitude,
                 "edl_ideal": number(values[10]),
                 "edl_real": real,
+                "data_instalacao": data_instalacao,
+                "data_instalacao_original": data_instalacao_original,
+                "qualidade_data_instalacao": qualidade_data_instalacao,
                 "tamanho_area": text(values[9]),
                 "arquivo_origem": str(path.relative_to(root)),
             })
@@ -328,14 +367,25 @@ def build_analytical_table(observations, root, data):
         if not edls.empty:
             project = Transformer.from_crs(4326, 31985, always_xy=True).transform
             edl_x, edl_y = project(edls.longitude.to_numpy(), edls.latitude.to_numpy())
+            edl_dates = pd.to_datetime(edls.get("data_instalacao"), errors="coerce").to_numpy()
             valid = result["latitude"].notna() & result["longitude"].notna()
             valid_index = result.index[valid]
             x, y = project(result.loc[valid, "longitude"].to_numpy(), result.loc[valid, "latitude"].to_numpy())
             distances = []
+            nearest_indices = []
             for start in range(0, len(x), 20_000):
-                distances.append(np.sqrt((x[start:start + 20_000, None] - edl_x[None, :]) ** 2 + (y[start:start + 20_000, None] - edl_y[None, :]) ** 2).min(axis=1))
+                distance_matrix = np.sqrt((x[start:start + 20_000, None] - edl_x[None, :]) ** 2 + (y[start:start + 20_000, None] - edl_y[None, :]) ** 2)
+                distances.append(distance_matrix.min(axis=1))
+                nearest_indices.append(distance_matrix.argmin(axis=1))
             result.loc[valid_index, "distancia_edl_m"] = np.concatenate(distances)
-            for radius in (50, 100, 150, 200):
+            nearest = np.concatenate(nearest_indices)
+            result.loc[valid_index, "edl_mais_proxima_id"] = edls.iloc[nearest].edl_id.to_numpy()
+            result.loc[valid_index, "data_instalacao_edl"] = edl_dates[nearest]
+            result.loc[valid_index, "qualidade_data_instalacao_edl"] = edls.iloc[nearest].qualidade_data_instalacao.to_numpy()
+            result["instalada_ate_coleta"] = pd.Series(pd.NA, index=result.index, dtype="boolean")
+            comparable = result["data_instalacao_edl"].notna() & result["data"].notna()
+            result.loc[comparable, "instalada_ate_coleta"] = result.loc[comparable, "data_instalacao_edl"].le(result.loc[comparable, "data"])
+            for radius in (50, 100, 150, 200, 300, 400, 500):
                 result[f"edl_a_{radius}m"] = result["distancia_edl_m"].le(radius)
     locations = result[["id_ovt", "latitude", "longitude"]].drop_duplicates("id_ovt")
     area_path = data / "curated" / "areas_recife.geojson"
@@ -460,6 +510,8 @@ def main():
     pd.DataFrame([{
         "edls": len(edls),
         "edls_coordenadas_validas": int((edls.get("qualidade_coordenada", pd.Series(dtype=str)) == "valida").sum()),
+        "edls_com_data_instalacao": int(edls.get("data_instalacao", pd.Series(dtype="datetime64[ns]")).notna().sum()),
+        "edls_instalacao_2026": int(pd.to_datetime(edls.get("data_instalacao"), errors="coerce").dt.year.eq(2026).sum()) if not edls.empty else 0,
         "ovitrampas": len(ovitrampas),
         "observacoes": len(observations),
         "observacoes_por_ano": observations.groupby("ano_arquivo").size().to_dict() if not observations.empty else {},

@@ -128,6 +128,29 @@ Sem datas de instalação, ativação e manutenção das EDLs, essa comparação
 interpretada como associação espacial exploratória. Não será apresentada como
 efeito causal, eficácia ou análise antes/depois.
 
+Quando a data de instalação estiver disponível, a análise poderá distinguir
+observações anteriores e posteriores à instalação:
+
+```text
+instalada_ate_coleta = data_instalacao <= data_coleta
+```
+
+Datas informadas apenas como mês/ano serão tratadas como aproximações e não
+como dias exatos. A data de instalação indica o início registrado da operação,
+mas não confirma ativação, manutenção ou permanência da EDL. Comparações
+temporais deverão considerar uma defasagem biológica de 3 a 6 semanas e manter
+as observações sem data em categoria separada.
+
+As distâncias são calculadas em metros após reprojeção para o sistema métrico
+EPSG:31985. Para cada ovitrampa, a EDL mais próxima é identificada e sua data
+de instalação é associada à observação. A distância não é calculada usando
+latitude/longitude diretamente.
+
+Na visualização temporal, EDLs com data de instalação posterior à referência do
+ciclo ficam ocultas até sua instalação registrada. EDLs sem data permanecem
+visíveis como desconhecidas; essa escolha evita interpretar dado ausente como
+inexistência da estação.
+
 ## Hipóteses a Reavaliar
 
 - adequação do raio de ação das EDLs;

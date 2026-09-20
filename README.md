@@ -60,6 +60,11 @@ sensibilidades analíticas incluem 50, 100, 150, 200, 300, 400 e 500 m.
 A documentação, limitações e confirmações pendentes estão em
 [`docs/gevacz.md`](docs/gevacz.md).
 
+O cadastro de EDLs também aproveita, quando disponível, a data registrada na
+coluna `L` de `TOTAL DE EDL POR DS.xlsx`. Datas completas e datas informadas
+apenas por mês/ano são preservadas com sua qualidade e texto original. O mapa
+destaca instalações registradas em 2026, sem remover EDLs antigas ou sem data.
+
 ### Indicadores
 
 `percentual_abastecimento_calendario` é calculado pela união dos intervalos do calendário (`layer 5`) dentro do mês, dividida pelo total de horas do mês. Intervalos sobrepostos não são contados duas vezes.
