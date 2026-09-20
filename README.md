@@ -6,6 +6,9 @@ O pipeline salva o retorno bruto em `JSONL.gz`, trata os períodos e serviços e
 uv sync
 uv run python pipeline.py --ano 2026
 uv run python clima.py --ano 2024 --ano 2025 --ano 2026
+uv run python pipeline.py --ano 2024
+uv run python pipeline.py --ano 2025
+uv run python gevacz.py
 uv run python mapa_areas.py
 ```
 
@@ -14,9 +17,11 @@ Saídas principais:
 - `data/raw/compesa/`: cache bruto da API;
 - `data/curated/`: períodos e serviços padronizados;
 - `data/analytics/mensal/`: indicadores mensais em Parquet;
+- `data/analytics/diario/`: abastecimento diário por área;
 - `data/raw/open_meteo/`: respostas brutas do Open-Meteo;
 - `data/analytics/clima/`: clima diário e mensal tratado;
 - `data/mapa_recife.html`: mapa com slider mensal e camadas opcionais.
+- `data/curated/gevacz/`: EDLs, ovitrampas e observações normalizadas.
 
 O mapa usa todos os anos disponíveis por padrão. Para limitar o intervalo:
 
@@ -35,6 +40,25 @@ O mapa começa apenas com o mapa-base. As camadas de abastecimento, temperatura 
 A grade climática é descoberta a partir do município inteiro, independentemente da distribuição das áreas COMPESA. Para visualizar a cobertura contínua, cada célula municipal recebe o valor da célula meteorológica HRES mais próxima; essa atribuição é uma aproximação espacial da fonte e não uma medição de bairro.
 
 O escopo analítico para H3, EDLs, ovitrampas, clima e modelagem está em [`docs/escopo-analitico.md`](docs/escopo-analitico.md).
+
+### GEVACZ
+
+As planilhas originais ficam em `data/informacoes-gevacz/`. Para normalizá-las
+sem alterar a origem:
+
+```bash
+uv run python gevacz.py
+```
+
+O mapa AEDES BI usa ciclos como linha do tempo e mostra os pontos físicos das
+ovitrampas independentemente da coleta selecionada. A janela ambiental pode
+ser alterada entre 7, 14, 21 e 28 dias anteriores à coleta. A área operacional
+presumida das EDLs pode ser ajustada entre 0 e 500 m, com 400 m como valor
+padrão. A referência de 400 m vem de ensaios da Fiocruz em Manaus e
+Manacapuru; ela não representa eficácia comprovada das EDLs no Recife. As
+sensibilidades analíticas incluem 50, 100, 150, 200, 300, 400 e 500 m.
+A documentação, limitações e confirmações pendentes estão em
+[`docs/gevacz.md`](docs/gevacz.md).
 
 ### Indicadores
 
