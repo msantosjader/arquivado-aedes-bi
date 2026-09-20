@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Baixa e agrega clima diário do Open-Meteo para os centroides das áreas."""
+"""Baixa e agrega clima diário do Open-Meteo para a grade do Recife."""
 import argparse
 import gzip
 import json
@@ -9,12 +9,14 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from shapely.geometry import shape
+from shapely.geometry import Point, shape
+from shapely.ops import unary_union
 
 API = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 TIMEZONE = "America/Recife"
 MODEL = "ecmwf_ifs"
-BATCH_SIZE = 50
+BATCH_SIZE = 10
+GRID_STEP = 0.04
 DAILY_VARIABLES = ",".join([
     "temperature_2m_mean",
     "temperature_2m_min",
@@ -38,14 +40,19 @@ def area_points(path):
 
 
 def weather_points(path):
-    groups = {}
-    for point in area_points(path):
-        key = (round(point["latitude"] * 10) / 10, round(point["longitude"] * 10) / 10)
-        groups.setdefault(key, []).append(point["area_id"])
-    return [
-        {"area_ids": area_ids, "latitude": latitude, "longitude": longitude}
-        for (latitude, longitude), area_ids in groups.items()
-    ]
+    source = json.loads(path.read_text(encoding="utf-8"))
+    municipal = unary_union([shape(feature["geometry"]) for feature in source.get("features", [source])])
+    min_lon, min_lat, max_lon, max_lat = municipal.bounds
+    points = []
+    latitude = min_lat
+    while latitude <= max_lat:
+        longitude = min_lon
+        while longitude <= max_lon:
+            if municipal.intersects(Point(longitude, latitude)):
+                points.append({"latitude": round(latitude, 6), "longitude": round(longitude, 6)})
+            longitude += GRID_STEP
+        latitude += GRID_STEP
+    return points
 
 
 def fetch_batch(path, points, start, end, refresh=False):
@@ -60,6 +67,7 @@ def fetch_batch(path, points, start, end, refresh=False):
         "daily": DAILY_VARIABLES,
         "timezone": TIMEZONE,
         "models": MODEL,
+        "cell_selection": "land",
         "temperature_unit": "celsius",
         "precipitation_unit": "mm",
     }
@@ -81,11 +89,12 @@ def fetch_batch(path, points, start, end, refresh=False):
     return record
 
 
-def daily_rows(record):
+def daily_rows(record, area_by_cell):
     rows = []
     for point, response in zip(record["areas"], record["responses"]):
         daily = response.get("daily", {})
-        area_ids = point.get("area_ids", [point.get("area_id")])
+        cell = (round(float(response.get("latitude")), 6), round(float(response.get("longitude")), 6))
+        area_ids = area_by_cell.get(cell, [None])
         for area_id in area_ids:
             for index, day in enumerate(daily.get("time", [])):
                 rows.append({
@@ -112,14 +121,29 @@ def write_table(frame, path):
 def run(year, data, refresh=False):
     start = f"{year}-01-01"
     end = f"{year}-12-31" if year < date.today().year else date.today().isoformat()
-    points = weather_points(data / "curated" / "areas_recife.geojson")
+    boundary_path = data / "curated" / "limites" / "recife.geojson"
+    points = weather_points(boundary_path)
     records = []
     for offset in range(0, len(points), BATCH_SIZE):
         batch = points[offset:offset + BATCH_SIZE]
-        path = data / "raw" / "open_meteo" / f"clima_hres_{year}_{offset // BATCH_SIZE:02d}.json.gz"
+        path = data / "raw" / "open_meteo" / f"clima_hres_grid_{year}_{offset // BATCH_SIZE:02d}.json.gz"
         records.append(fetch_batch(path, batch, start, end, refresh))
 
-    daily = pd.DataFrame([row for record in records for row in daily_rows(record)])
+    responses_by_cell = {}
+    for record in records:
+        for response in record["responses"]:
+            cell = (round(float(response.get("latitude")), 6), round(float(response.get("longitude")), 6))
+            responses_by_cell.setdefault(cell, response)
+    response_cells = set(responses_by_cell)
+    area_by_cell = {cell: [] for cell in response_cells}
+    for point in area_points(data / "curated" / "areas_recife.geojson"):
+        cell = min(response_cells, key=lambda candidate: (candidate[0] - point["latitude"]) ** 2 + (candidate[1] - point["longitude"]) ** 2)
+        area_by_cell[cell].append(point["area_id"])
+    daily = pd.DataFrame([
+        row
+        for cell, response in responses_by_cell.items()
+        for row in daily_rows({"areas": [{"latitude": cell[0], "longitude": cell[1]}], "responses": [response]}, area_by_cell)
+    ])
     daily["data"] = pd.to_datetime(daily["data"])
     daily["ano"] = daily["data"].dt.year
     daily["mes"] = daily["data"].dt.month

@@ -32,6 +32,8 @@ Use `--refresh` apenas para criar um novo snapshot da API.
 
 O mapa começa apenas com o mapa-base. As camadas de abastecimento, temperatura e chuva são ativadas separadamente e podem ficar visíveis ao mesmo tempo. As células meteorológicas são recortadas pelo limite do Recife, mantendo a resolução da fonte em vez de criar uma resolução H3 artificial.
 
+A grade climática é descoberta a partir do município inteiro, independentemente da distribuição das áreas COMPESA. Para visualizar a cobertura contínua, cada célula municipal recebe o valor da célula meteorológica HRES mais próxima; essa atribuição é uma aproximação espacial da fonte e não uma medição de bairro.
+
 O escopo analítico para H3, EDLs, ovitrampas, clima e modelagem está em [`docs/escopo-analitico.md`](docs/escopo-analitico.md).
 
 ### Indicadores
