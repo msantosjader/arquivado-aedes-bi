@@ -1,0 +1,71 @@
+{
+  "raw_rows": 147987,
+  "duplicate_rows": 104,
+  "duplicate_keys": 52,
+  "duplicate_ids": [
+    "SJS1002",
+    "SJS1003"
+  ],
+  "deduplicated_rows": 147935,
+  "eligible_before_environment": 110033,
+  "environment_rows": 110033,
+  "edl_rows": 110033,
+  "active_edl_rows": 30379,
+  "unknown_active_edl_rows": 79654,
+  "environment_rows_by_year": {
+    "2024": 43596,
+    "2025": 37575,
+    "2026": 28862
+  },
+  "edl_rows_by_year": {
+    "2024": 43596,
+    "2025": 37575,
+    "2026": 28862
+  },
+  "zero_rows_environment": 1478,
+  "zero_fraction_environment": 0.013432333936182782,
+  "mean_eggs_environment": 212.2703643452419,
+  "variance_eggs_environment": 61225.423857887654,
+  "variance_mean_ratio_environment": 288.43133164980617,
+  "environment_missing": {
+    "chuva_mm_7d": 2,
+    "chuva_mm_14d": 2,
+    "chuva_mm_21d": 1736,
+    "chuva_mm_28d": 1753,
+    "temperatura_media_7d": 2,
+    "temperatura_media_14d": 2,
+    "temperatura_media_21d": 1736,
+    "temperatura_media_28d": 1753,
+    "horas_abastecimento_7d": 665,
+    "horas_abastecimento_14d": 665,
+    "horas_abastecimento_21d": 2392,
+    "horas_abastecimento_28d": 2409
+  },
+  "sem_area_compesa_levels": {
+    "0": 109656,
+    "1": 377
+  },
+  "temporal_environment_train": 80810,
+  "temporal_environment_test": 28557,
+  "temporal_edl_train": 81171,
+  "temporal_edl_test": 28862,
+  "active_edl_sensitivity_rows": 30379,
+  "spatial_edl_train": 88496,
+  "spatial_edl_test": 21389,
+  "zinb_tested": false,
+  "znib_tested": false,
+  "arboviroses": {
+    "rows": 23990,
+    "by_disease": {
+      "chikungunya": 4336,
+      "dengue": 18364,
+      "zika": 1290
+    },
+    "by_year": {
+      "2024.0": 12691,
+      "2025.0": 11133
+    },
+    "missing_or_invalid_onset_date": 166,
+    "bairros": 114
+  }
+}
