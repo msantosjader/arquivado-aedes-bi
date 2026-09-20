@@ -1,0 +1,12 @@
+[project]
+name = "aedes-bi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "geopandas>=1.1.4",
+    "pandas>=3.0.6",
+    "pyarrow>=18.0.0",
+    "requests>=2.34.2",
+]
