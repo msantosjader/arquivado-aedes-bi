@@ -5,11 +5,13 @@ Os resultados descrevem associacoes. Nao sao evidencia de causalidade nem de efi
 ## Conclusoes
 
 **Conclusao sobre EDLs:** nao ha evidencia consistente para afirmar eficacia. A distancia ate a EDL mais proxima apresentou associacao negativa, o indicador de 400 m nao foi robusto e a distancia ate EDL ativa conhecida apresentou sinal contrario. Essa inconsistencia, somada a informacao incompleta de ativacao e manutencao, impede uma conclusao de eficacia.
+**Diferenca-em-diferencas:** a instalacao registrada em 2026 foi analisada como proxy de inicio da intervencao para 126 ovitrampas no raio de 400 m, com controles a mais de 400 m. O resultado deve ser interpretado somente se as tendencias pre-intervencao forem plausivelmente paralelas; a instalacao nao comprova ativacao, manutencao ou eficacia.
 **Conclusao sobre ambiente:** as janelas de 7, 14, 21 e 28 dias foram ajustadas separadamente. A leitura final deve priorizar sinais que se repetem entre janelas, anos e validacoes; um resultado isolado em uma janela nao e considerado evidencia robusta.
 
 **Distancia ate EDL mais proxima:** evidencia de associacao negativa no ajuste NB2 (coeficiente -0.0488, p=0.0101); isso nao demonstra causalidade.
 **Indicador de 400 m:** nao ha evidencia estatistica robusta no ajuste NB2 (coeficiente -0.0049, p=0.617).
 **Distancia ate EDL ativa conhecida (sensibilidade):** evidencia de associacao positiva no ajuste NB2 (coeficiente 0.0334, p=0.00199); isso nao demonstra causalidade.
+**Efeito DiD de instalacao registrada:** nao ha evidencia estatistica robusta no ajuste NB2 (coeficiente -0.0133, p=0.759).
 **Chuva em 7 dias:** nao ha evidencia estatistica robusta no ajuste NB2 (coeficiente -0.0000, p=0.98).
 **Temperatura em 7 dias:** evidencia de associacao positiva no ajuste NB2 (coeficiente 0.0179, p=0.0447); isso nao demonstra causalidade.
 **Dias sem abastecimento em 7 dias:** evidencia de associacao negativa no ajuste NB2 (coeficiente -0.0090, p=0.00746); isso nao demonstra causalidade.
@@ -27,6 +29,15 @@ Cada janela foi ajustada em um modelo separado. Coeficientes positivos indicam m
 - Registros de Recife normalizados: 23990.
 - Por doenca: {'chikungunya': 4336, 'dengue': 18364, 'zika': 1290}.
 - Os casos foram agregados por mes e bairro/distrito. Esta etapa e descritiva; nao ha coordenadas individuais nem denominador populacional para taxas H3.
+
+## Diferenca-em-diferencas
+
+- Resumo:  treated_400m  post_installation  observacoes  ovitrampas  media_ovos  mediana_ovos
+            0                  0        63397        1731  209.480212         139.0
+            1                  0         5857         124  223.430084         145.0
+            1                  1          785         122  179.774522         103.0
+- O modelo compara a mudanca pre/post nas ovitrampas ate 400 m com ovitrampas a mais de 400 m, controlando clima, falta de abastecimento, ano, mes e efeitos fixos H3-8.
+- Tendencia mensal pre-2026: grupo ate 400 m=0.833; controle=0.571; diferenca=0.262. Isso e um diagnostico simples, nao um teste definitivo de tendencias paralelas.
 
 ## Base e exclusoes
 
@@ -75,6 +86,8 @@ edl_ativa_sensibilidade   ajuste_completo            7 distancia_ativa_continua 
            edl_espacial     temporal_2026           28       distancia_continua     NB2  79066 1.010959e+06 1.011005e+06 7.243013e+04            0.999851   1.315484 859.917815 172.380885 244.636327
            edl_espacial espacial_bloco_h3            7       distancia_continua Poisson  87978 1.761292e+07 1.761309e+07 1.703540e+07          270.349429        NaN 960.910561 164.684666 261.182126
            edl_espacial espacial_bloco_h3            7       distancia_continua     NB2  87978 1.118411e+06 1.118580e+06 8.264810e+04            0.998800   1.283059 960.954957 164.611226 261.159382
+               did_400m   ajuste_completo            7              tratado_pos Poisson  70039 1.335239e+07 1.335420e+07 1.289303e+07          250.599348        NaN        NaN        NaN        NaN
+               did_400m   ajuste_completo            7              tratado_pos     NB2  70039 8.860734e+05 8.878865e+05 6.801776e+04            0.996968   1.200394        NaN        NaN        NaN
 ```
 
 ## Validacao

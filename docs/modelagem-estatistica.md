@@ -50,6 +50,13 @@ A analise EDL acrescenta, em modelos separados, distancia ate a EDL mais
 proxima, faixa de distancia ou indicador de 400 m. A distancia ate EDL ativa
 conhecida e uma sensibilidade restrita as 30.061 observacoes disponiveis.
 
+Tambem foi ajustada uma diferenca-em-diferencas de sensibilidade usando a
+instalacao registrada como proxy de inicio da intervencao. O grupo exposto e
+formado por ovitrampas ate 400 m de uma EDL com data exata; o controle usa
+ovitrampas a mais de 400 m. O modelo usa NB2, ano, mes, clima, falta de
+abastecimento e efeitos fixos H3-8. A instalacao nao comprova ativacao,
+manutencao ou eficacia.
+
 `sem_area_compesa` e auditada e entra quando possui variacao na amostra.
 
 Poisson e usado somente como baseline. A exposicao EDL e avaliada em modelos

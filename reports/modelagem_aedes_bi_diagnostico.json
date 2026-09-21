@@ -54,6 +54,20 @@
   "spatial_edl_test": 21389,
   "zinb_tested": false,
   "znib_tested": false,
+  "did": {
+    "exact_installation_rows": 23954,
+    "treated_ovitrampas": 126,
+    "treated_rows": 6642,
+    "control_rows_before_model": 63950,
+    "did_model_rows": 70039,
+    "did_model_ovitrampas": 1857,
+    "treated_post_rows": 785,
+    "treated_pre_rows": 5857,
+    "control_rows": 63397,
+    "pretrend_slope_control": 0.5705039945594065,
+    "pretrend_slope_treated": 0.8329464186001005,
+    "pretrend_slope_difference": 0.26244242404069407
+  },
   "arboviroses": {
     "rows": 23990,
     "by_disease": {

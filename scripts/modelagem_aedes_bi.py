@@ -194,6 +194,61 @@ def fit_models(data: pd.DataFrame, exposure: str | None, days: int, spatial: boo
     return poisson, nb2
 
 
+def fit_custom_models(data: pd.DataFrame, formula: str) -> tuple[object, object]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        poisson = smf.glm(formula, data=data, family=sm.families.Poisson()).fit()
+        alpha = estimate_alpha(poisson)
+        nb2 = smf.glm(formula, data=data, family=sm.families.NegativeBinomial(alpha=alpha)).fit()
+    nb2._nb2_alpha = alpha
+    return poisson, nb2
+
+
+def prepare_did(environmental: pd.DataFrame) -> tuple[pd.DataFrame, dict, pd.DataFrame]:
+    exact = environmental[environmental["qualidade_data_instalacao_edl"].eq("data_exata")].copy()
+    exact = exact[exact["data_instalacao_edl"].notna() & exact["distancia_edl_m"].notna()].copy()
+    treated_ids = set(exact.loc[exact["distancia_edl_m"].le(400), "id_ovt_chave"])
+    treated = environmental[environmental["id_ovt_chave"].isin(treated_ids)].copy()
+    controls = environmental[~environmental["id_ovt_chave"].isin(treated_ids) & environmental["distancia_edl_m"].gt(400)].copy()
+    did = pd.concat([treated, controls], ignore_index=True)
+    did["treated_400m"] = did["id_ovt_chave"].isin(treated_ids).astype(int)
+    did["post_installation"] = (
+        did["treated_400m"].eq(1)
+        & did["data_instalacao_edl"].notna()
+        & did["data_coleta"].ge(did["data_instalacao_edl"])
+    ).astype(int)
+    did["did_effect"] = did["treated_400m"] * did["post_installation"]
+    did = model_data(did, 7)
+    summary = did.groupby(["treated_400m", "post_installation"], as_index=False).agg(
+        observacoes=("n_ovos", "size"),
+        ovitrampas=("id_ovt_chave", "nunique"),
+        media_ovos=("n_ovos", "mean"),
+        mediana_ovos=("n_ovos", "median"),
+    )
+    pre = did[did["ano"] < 2026].copy()
+    pre["periodo_pre"] = pre["data_coleta"].dt.to_period("M").astype(str)
+    pre_means = pre.groupby(["periodo_pre", "treated_400m"], as_index=False)["n_ovos"].mean()
+    pre_means["tempo"] = pd.factorize(pre_means["periodo_pre"])[0]
+    slopes = {}
+    for treated_value, group in pre_means.groupby("treated_400m"):
+        slopes[str(int(treated_value))] = float(np.polyfit(group["tempo"], group["n_ovos"], 1)[0]) if len(group) > 1 else np.nan
+    audit = {
+        "exact_installation_rows": int(len(exact)),
+        "treated_ovitrampas": int(len(treated_ids)),
+        "treated_rows": int(len(treated)),
+        "control_rows_before_model": int(len(controls)),
+        "did_model_rows": int(len(did)),
+        "did_model_ovitrampas": int(did["id_ovt_chave"].nunique()),
+        "treated_post_rows": int((did["did_effect"] == 1).sum()),
+        "treated_pre_rows": int(((did["treated_400m"] == 1) & (did["post_installation"] == 0)).sum()),
+        "control_rows": int((did["treated_400m"] == 0).sum()),
+        "pretrend_slope_control": slopes.get("0"),
+        "pretrend_slope_treated": slopes.get("1"),
+        "pretrend_slope_difference": slopes.get("1", np.nan) - slopes.get("0", np.nan),
+    }
+    return did, audit, summary
+
+
 def fit_row(result: object, analysis: str, exposure: str, validation: str, days: int) -> dict:
     aic = float(-2 * result.llf + 2 * len(result.params))
     bic = float(-2 * result.llf + len(result.params) * np.log(result.nobs))
@@ -239,7 +294,7 @@ def prediction_metrics(result: object, test: pd.DataFrame) -> dict:
     }
 
 
-def run_models(environmental: pd.DataFrame, edl: pd.DataFrame, active: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+def run_models(environmental: pd.DataFrame, edl: pd.DataFrame, active: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict, pd.DataFrame]:
     metrics, coefs = [], []
     for days in WINDOWS:
         env_poisson, env_nb2 = fit_models(environmental, None, days)
@@ -287,6 +342,17 @@ def run_models(environmental: pd.DataFrame, edl: pd.DataFrame, active: pd.DataFr
         row.update(prediction_metrics(result, spatial_test))
         metrics.append(row)
 
+    did_data, did_audit, did_summary = prepare_did(environmental)
+    did_formula = (
+        "n_ovos ~ did_effect + chuva_mm_7d + temperatura_media_7d "
+        "+ dias_sem_abastecimento_7d + C(ano) + C(mes) + C(h3_index)"
+    )
+    if not did_data.empty:
+        poisson, nb2 = fit_custom_models(did_data, did_formula)
+        for result in (poisson, nb2):
+            metrics.append(fit_row(result, "did_400m", "tratado_pos", "ajuste_completo", 7))
+            coefs.append(coefficients(result, "did_400m", "tratado_pos", "ajuste_completo", 7))
+
     validation = {
         "temporal_environment_train": int(len(model_data(environmental[environmental["ano"] < 2026], 7))),
         "temporal_environment_test": int(len(model_data(environmental[environmental["ano"] == 2026], 7))),
@@ -298,10 +364,11 @@ def run_models(environmental: pd.DataFrame, edl: pd.DataFrame, active: pd.DataFr
         "zinb_tested": False,
         "znib_tested": False,
     }
-    return pd.DataFrame(metrics), pd.concat(coefs, ignore_index=True), validation
+    validation["did"] = did_audit
+    return pd.DataFrame(metrics), pd.concat(coefs, ignore_index=True), validation, did_summary
 
 
-def make_figures(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.DataFrame, metric_table: pd.DataFrame, coef_table: pd.DataFrame) -> None:
+def make_figures(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.DataFrame, did_summary: pd.DataFrame, metric_table: pd.DataFrame, coef_table: pd.DataFrame) -> None:
     FIGURES.mkdir(parents=True, exist_ok=True)
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -336,6 +403,14 @@ def make_figures(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.Dat
     fig, ax = plt.subplots(figsize=(10, 4)); validation.pivot_table(index="split", columns="model", values="mae", aggfunc="first").plot(kind="bar", ax=ax, color=["#64748b", "#0f766e"])
     ax.set(title="Erro absoluto medio fora da amostra", xlabel="Validacao", ylabel="MAE"); fig.tight_layout(); fig.savefig(FIGURES / "validacao_mae.png", dpi=150); plt.close(fig)
 
+    if not did_summary.empty:
+        plot_data = did_summary.copy()
+        plot_data["grupo"] = np.where(plot_data["treated_400m"].eq(1), "Ate 400 m", ">400 m")
+        plot_data["periodo"] = np.where(plot_data["post_installation"].eq(1), "Pos", "Pre")
+        chart = plot_data.pivot(index="grupo", columns="periodo", values="media_ovos")
+        fig, ax = plt.subplots(figsize=(7, 4)); chart[[c for c in ["Pre", "Pos"] if c in chart].copy()].plot(kind="bar", ax=ax, color=["#64748b", "#0f766e"])
+        ax.set(title="Media de ovos antes e depois da instalacao registrada", xlabel="Grupo", ylabel="Media de n_ovos"); fig.tight_layout(); fig.savefig(FIGURES / "did_pre_pos.png", dpi=150); plt.close(fig)
+
     windows = coef_table[(coef_table["analysis"] == "ambiental") & (coef_table["model"] == "NB2") & (coef_table["validation"] == "ajuste_completo")].copy()
     windows = windows[windows["term"].str.contains("chuva_mm|temperatura_media|dias_sem_abastecimento")]
     windows["variavel"] = windows["term"].str.replace(r"_\d+d$", "", regex=True).str.replace("chuva_mm", "chuva", regex=False).str.replace("temperatura_media", "temperatura", regex=False).str.replace("dias_sem_abastecimento", "sem abastecimento", regex=False)
@@ -361,10 +436,11 @@ def conclusion(coefs: pd.DataFrame, analysis: str, term_pattern: str, title: str
     return f"**{title}:** nao ha evidencia estatistica robusta no ajuste NB2 (coeficiente {row.coef:.4f}, p={row.p_value:.3g})."
 
 
-def write_outputs(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.DataFrame, disease_audit: dict, audit: dict, metrics: pd.DataFrame, coefs: pd.DataFrame, validation: dict) -> None:
+def write_outputs(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.DataFrame, disease_audit: dict, did_summary: pd.DataFrame, audit: dict, metrics: pd.DataFrame, coefs: pd.DataFrame, validation: dict) -> None:
     REPORTS.mkdir(exist_ok=True)
     metrics.to_csv(REPORTS / "modelagem_aedes_bi_metricas.csv", index=False)
     coefs.to_csv(REPORTS / "modelagem_aedes_bi_coeficientes.csv", index=False)
+    did_summary.to_csv(REPORTS / "did_400m_resumo.csv", index=False)
     diagnosis = {**audit, **validation}
     diagnosis["arboviroses"] = disease_audit
     window_lines = []
@@ -383,11 +459,13 @@ def write_outputs(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.Da
         "Os resultados descrevem associacoes. Nao sao evidencia de causalidade nem de eficacia comprovada das EDLs.", "",
         "## Conclusoes", "",
         "**Conclusao sobre EDLs:** nao ha evidencia consistente para afirmar eficacia. A distancia ate a EDL mais proxima apresentou associacao negativa, o indicador de 400 m nao foi robusto e a distancia ate EDL ativa conhecida apresentou sinal contrario. Essa inconsistencia, somada a informacao incompleta de ativacao e manutencao, impede uma conclusao de eficacia.",
+        "**Diferenca-em-diferencas:** a instalacao registrada em 2026 foi analisada como proxy de inicio da intervencao para 126 ovitrampas no raio de 400 m, com controles a mais de 400 m. O resultado deve ser interpretado somente se as tendencias pre-intervencao forem plausivelmente paralelas; a instalacao nao comprova ativacao, manutencao ou eficacia.",
         "**Conclusao sobre ambiente:** as janelas de 7, 14, 21 e 28 dias foram ajustadas separadamente. A leitura final deve priorizar sinais que se repetem entre janelas, anos e validacoes; um resultado isolado em uma janela nao e considerado evidencia robusta.",
         "",
         conclusion(coefs, "edl_espacial", "^edl_distancia_km$", "Distancia ate EDL mais proxima"),
         conclusion(coefs, "edl_espacial", "^edl_400m$", "Indicador de 400 m"),
         conclusion(coefs, "edl_ativa_sensibilidade", "^edl_ativa_distancia_km$", "Distancia ate EDL ativa conhecida (sensibilidade)"),
+        conclusion(coefs, "did_400m", "^did_effect$", "Efeito DiD de instalacao registrada"),
         conclusion(coefs, "ambiental", "^chuva_mm_7d$", "Chuva em 7 dias"),
         conclusion(coefs, "ambiental", "^temperatura_media_7d$", "Temperatura em 7 dias"),
         conclusion(coefs, "ambiental", "^dias_sem_abastecimento_7d$", "Dias sem abastecimento em 7 dias"),
@@ -400,6 +478,11 @@ def write_outputs(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.Da
         f"- Registros de Recife normalizados: {disease_audit.get('rows', 0)}.",
         f"- Por doenca: {disease_audit.get('by_disease', {})}.",
         "- Os casos foram agregados por mes e bairro/distrito. Esta etapa e descritiva; nao ha coordenadas individuais nem denominador populacional para taxas H3.",
+        "",
+        "## Diferenca-em-diferencas", "",
+        f"- Resumo: {did_summary.to_string(index=False)}",
+        "- O modelo compara a mudanca pre/post nas ovitrampas ate 400 m com ovitrampas a mais de 400 m, controlando clima, falta de abastecimento, ano, mes e efeitos fixos H3-8.",
+        f"- Tendencia mensal pre-2026: grupo ate 400 m={validation['did'].get('pretrend_slope_treated'):.3f}; controle={validation['did'].get('pretrend_slope_control'):.3f}; diferenca={validation['did'].get('pretrend_slope_difference'):.3f}. Isso e um diagnostico simples, nao um teste definitivo de tendencias paralelas.",
         "",
         "## Base e exclusoes", "",
         f"- Base ambiental: {audit['environment_rows']} observacoes.",
@@ -428,9 +511,9 @@ def write_outputs(environmental: pd.DataFrame, edl: pd.DataFrame, disease: pd.Da
 def main() -> None:
     environmental, active, audit = prepare_data()
     disease, disease_audit = load_arboviroses()
-    metrics, coefs, validation = run_models(environmental, environmental.copy(), active)
-    make_figures(environmental, environmental, disease, metrics, coefs)
-    write_outputs(environmental, active, disease, disease_audit, audit, metrics, coefs, validation)
+    metrics, coefs, validation, did_summary = run_models(environmental, environmental.copy(), active)
+    make_figures(environmental, environmental, disease, did_summary, metrics, coefs)
+    write_outputs(environmental, active, disease, disease_audit, did_summary, audit, metrics, coefs, validation)
     print(json.dumps({**audit, **validation, "arboviroses": disease_audit}, ensure_ascii=False, indent=2))
     print("\nMETRICAS\n" + metrics.to_string(index=False))
     print("\nCONCLUSOES\n" + "\n".join([
