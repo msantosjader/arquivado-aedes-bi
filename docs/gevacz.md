@@ -119,7 +119,10 @@ mapa refaz no navegador um k-center guloso: parte da distância de cada
 ovitrampa até a EDL mais próxima (`distancia_edl_m`, já calculada em
 EPSG:31985), marca como ponto proposto a ovitrampa descoberta mais distante
 e repete até cobrir 95% das ovitrampas ou até 400 pontos. Em 400 m isso
-resulta em 232 pontos. A camada depende do slider, por isso só aparece com a
+resulta em 232 pontos. Cada ponto recebe um marcador e um hexágono roxo
+tracejado com o mesmo raio do slider, no mesmo desenho do hexágono laranja
+das EDLs existentes: o contorno é uma aproximação da cobertura circular,
+exatamente como o hexágono real. A camada depende do slider, por isso só aparece com a
 camada EDLs marcada, e considera todas as EDLs do cadastro sem filtro de
 data: é uma pergunta de planejamento de rede, não de estado por ciclo. As
 distâncias entre ovitrampas usam uma projeção equirectangular local, com

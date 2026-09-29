@@ -55,7 +55,8 @@ def verifica_html():
                    'id="raio-bloco"', "hexEmCima", "DATA.h3_geometries[cell.h3_index]",
                    "amostraSuficiente", "dia da coleta",
                    'id="edl-proj-visivel"', "const PROJ=", "edlProjLayers",
-                   "projK+' pontos para cobrir '"):
+                   "projK+' pontos para cobrir '",
+                   "hexEmCima(o.latitude,o.longitude,radius)"):
         check(needle in html, f"HTML sem: {needle}")
     for banned in ("edl_buffers", "L.circle([edl.latitude", "H3 (resolução 8)"):
         check(banned not in html, f"HTML ainda contem: {banned}")

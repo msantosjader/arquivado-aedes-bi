@@ -78,7 +78,9 @@ A camada `EDLs projetadas` marca, para o raio selecionado, onde novas EDLs
 cobririam as ovitrampas ainda descobertas: um k-center guloso roda no
 navegador a cada mudança do slider e para em 95% de cobertura ou 400 pontos.
 Hoje só 37,7% das 2.843 ovitrampas estão a até 400 m de alguma das 174 EDLs
-válidas, e a mediana da distância é de 526 m.
+válidas, e a mediana da distância é de 526 m. Cada ponto proposto ganha um
+marcador e um hexágono roxo tracejado com o mesmo raio do slider, par ao
+hexágono laranja das EDLs existentes.
 A documentação, limitações e confirmações pendentes estão em
 [`docs/gevacz.md`](docs/gevacz.md).
 
