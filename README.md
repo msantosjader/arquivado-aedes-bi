@@ -26,10 +26,11 @@ Saídas principais:
 - `data/curated/gevacz/h3_diagnostico.parquet`: diagnóstico de distribuição das células H3.
 - `data/curated/gevacz/auditoria_georreferenciamento.xlsx`: comparação completa entre Excel e shapefiles de ovitrampas.
 
-O mapa inclui a camada H3 na resolução 8. A cor das células representa a média
+O mapa inclui a camada H3 na resolução 9. A cor das células representa a média
 de ovos em escala logarítmica no ciclo selecionado; positividade aparece como
-indicador secundário no popup. A resolução 9 permanece como
-saída analítica para sensibilidade e maior detalhe espacial.
+indicador secundário no popup. Células com menos de cinco observações são
+pintadas de cinza, porque em resolução 9 cerca de 88% delas ficam abaixo desse
+limite. A resolução 8 permanece no parquet como referência de sensibilidade.
 
 O mapa inclui pontos municipais válidos, pontos até 500 m da fronteira
 (`fora_recife_proxima`) e pontos sem interseção com áreas COMPESA
@@ -65,11 +66,14 @@ uv run python gevacz.py
 
 O mapa AEDES BI usa ciclos como linha do tempo e mostra os pontos físicos das
 ovitrampas independentemente da coleta selecionada. A janela ambiental pode
-ser alterada entre 7, 14, 21 e 28 dias anteriores à coleta. A área operacional
+ser alterada entre 0, 7, 14, 21 e 28 dias: 0 lê o próprio dia da coleta e as
+demais leem os dias anteriores, sem incluir o dia da coleta. A área operacional
 presumida das EDLs pode ser ajustada entre 0 e 500 m, com 400 m como valor
-padrão. A referência de 400 m vem de ensaios da Fiocruz em Manaus e
-Manacapuru; ela não representa eficácia comprovada das EDLs no Recife. As
-sensibilidades analíticas incluem 50, 100, 150, 200, 300, 400 e 500 m.
+padrão; esse slider só aparece quando a camada EDLs está marcada, e o raio é
+desenhado como um hexágono regular centrado na EDL. A referência de 400 m vem
+de ensaios da Fiocruz em Manaus e Manacapuru; ela não representa eficácia
+comprovada das EDLs no Recife. As sensibilidades analíticas incluem 50, 100,
+150, 200, 300, 400 e 500 m.
 A documentação, limitações e confirmações pendentes estão em
 [`docs/gevacz.md`](docs/gevacz.md).
 

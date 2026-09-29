@@ -85,21 +85,27 @@ abastecimento quando esses campos existem na base analítica.
 
 Também é gerado `h3_diagnostico.parquet`, com quantidade de células, média e
 mediana de observações por célula e proporção de células com menos de cinco
-observações. Esse diagnóstico orienta a escolha entre resolução 8 e 9; não há
-uma resolução definitiva assumida antes dessa verificação.
+observações. Esse diagnóstico documenta o custo de trocar entre resolução 8 e
+9; o mapa assumiu a 9 e usa cinza para as células com menos de cinco
+observações.
 
 Na execução atual, incluindo pontos até 500 m da fronteira e pontos sem área
 COMPESA, a resolução 8 produziu 9.727 células e 19,9% delas tinham menos de
 cinco observações. A resolução 9 produziu 45.365 células e 88,0% tinham menos
-de cinco observações. Por isso, a resolução 8 é a camada H3 principal do mapa;
-a resolução 9 permanece disponível para análises de maior detalhe, com a
-ressalva de maior instabilidade por célula.
+de cinco observações. O mapa usa a resolução 9, escolhida pelo maior detalhe
+espacial; para conter a instabilidade, células com menos de cinco observações
+são pintadas de cinza e a cor só aparece onde há amostra. A resolução 8
+permanece no parquet como referência de sensibilidade.
 
 O H3 é uma camada de agregação e indexação. As distâncias EDL continuam sendo
 calculadas em metros no sistema EPSG:31985 antes da agregação, sem substituir a
 distância métrica por uma aproximação de célula.
 
-A malha H3 permanece fixa e não é centralizada nas EDLs. A camada do mapa usa
+A malha H3 permanece fixa e não é centralizada nas EDLs. Por cima dela o mapa
+desenha um hexágono regular centrado em cada EDL, com o raio do slider
+`Raio EDL` (218 m reproduzem o módulo da resolução 9). O hexágono é apenas
+visual, segue a distância circular até a EDL mais próxima e pode se sobrepor
+ao de EDLs vizinhas; ele não é uma célula de análise. A camada do mapa usa
 `ovos_media` em escala logarítmica como intensidade principal; positividade é
 mantida no popup como indicador secundário porque está saturada nos dados
 disponíveis (aproximadamente 98,5%). A análise de exposição usa a distância
