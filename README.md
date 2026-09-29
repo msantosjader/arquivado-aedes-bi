@@ -26,10 +26,13 @@ Saídas principais:
 - `data/curated/gevacz/h3_diagnostico.parquet`: diagnóstico de distribuição das células H3.
 - `data/curated/gevacz/auditoria_georreferenciamento.xlsx`: comparação completa entre Excel e shapefiles de ovitrampas.
 
-O mapa inclui a camada H3 na resolução 8. A cor das células representa a média
-de ovos em escala logarítmica no ciclo selecionado; positividade aparece como
-indicador secundário no popup. A resolução 9 permanece como
-saída analítica para sensibilidade e maior detalhe espacial.
+O mapa inclui a camada H3 na resolução 9. A cor representa a média de ovos por
+contagem válida no ciclo selecionado, em escala fixa de 0 a 500: vermelho mais
+escuro indica maior média e valores acima de 500 saturam na cor máxima. Zeros
+reais entram na média; ausências são ignoradas. Células sem contagem válida
+ficam cinzas, e o popup mostra o tamanho da amostra. Positividade aparece como
+indicador secundário no popup. A resolução 8 permanece no parquet como
+referência de sensibilidade.
 
 O mapa inclui pontos municipais válidos, pontos até 500 m da fronteira
 (`fora_recife_proxima`) e pontos sem interseção com áreas COMPESA
@@ -65,11 +68,23 @@ uv run python gevacz.py
 
 O mapa AEDES BI usa ciclos como linha do tempo e mostra os pontos físicos das
 ovitrampas independentemente da coleta selecionada. A janela ambiental pode
-ser alterada entre 7, 14, 21 e 28 dias anteriores à coleta. A área operacional
-presumida das EDLs pode ser ajustada entre 0 e 500 m, com 400 m como valor
-padrão. A referência de 400 m vem de ensaios da Fiocruz em Manaus e
-Manacapuru; ela não representa eficácia comprovada das EDLs no Recife. As
-sensibilidades analíticas incluem 50, 100, 150, 200, 300, 400 e 500 m.
+ser alterada entre 0, 7, 14, 21 e 28 dias: 0 lê o próprio dia da coleta e as
+demais leem os dias anteriores, sem incluir o dia da coleta. A área operacional
+presumida das EDLs pode ser ajustada entre 0 e 500 m, com 100 m como valor
+inicial; esse slider só aparece quando a camada EDLs está marcada, e o raio é
+desenhado como um hexágono regular centrado na EDL. A referência de 400 m vem
+de ensaios da Fiocruz em Manaus e Manacapuru; ela não representa eficácia
+comprovada das EDLs no Recife. As sensibilidades analíticas incluem 50, 100,
+150, 200, 300, 400 e 500 m.
+A camada `EDLs projetadas` marca, para o raio selecionado, onde novas EDLs
+cobrem as ovitrampas ainda descobertas: o algoritmo guloso recalcula no
+navegador a cada mudança do slider até cobrir todas, sem teto de pontos.
+Hoje só 37,7% das 2.843 ovitrampas estão a até 400 m de alguma das 174 EDLs
+válidas, e a mediana da distância é de 526 m. Cada ponto proposto ganha um
+marcador roxo tracejado e um hexágono roxo preenchido com o mesmo raio do
+slider, para diferenciá-lo do hexágono laranja das EDLs existentes.
+Roxo mais escuro representa maior ganho marginal de ovitrampas cobertas; a
+legenda mostra a escala de ganho para o raio selecionado.
 A documentação, limitações e confirmações pendentes estão em
 [`docs/gevacz.md`](docs/gevacz.md).
 

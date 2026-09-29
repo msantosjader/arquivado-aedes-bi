@@ -450,16 +450,17 @@ def build_cycle_summary(observations):
 
 
 def rolling_daily(frame, group_columns, date_column, measures):
-    """Calcula janelas anteriores sem incluir o dia da coleta."""
+    """Calcula janelas anteriores sem incluir o dia da coleta; janela 0 usa o próprio dia."""
     if frame.empty:
         return frame
     result = []
     for _, group in frame.sort_values(date_column).groupby(group_columns, dropna=False):
         group = group.sort_values(date_column).copy()
-        for days in (7, 14, 21, 28):
+        for days in (0, 7, 14, 21, 28):
             for column, operation in measures.items():
-                shifted = group[column].shift(1)
-                values = shifted.rolling(days, min_periods=days).agg(operation)
+                # ponytail: 0 = dia da coleta (sem shift); >=1 continua excluindo o dia da coleta
+                base = group[column] if days == 0 else group[column].shift(1)
+                values = base.rolling(max(days, 1), min_periods=max(days, 1)).agg(operation)
                 group[f"{column}_{days}d"] = values.to_numpy()
         result.append(group)
     return pd.concat(result, ignore_index=True)
@@ -543,7 +544,7 @@ def build_analytical_table(observations, root, data):
             "temperatura_media": "mean",
         })
         climate_columns = ["data", "weather_lat", "weather_lon"] + [
-            f"{column}_{days}d" for column in ("chuva_mm", "temperatura_media") for days in (7, 14, 21, 28)
+            f"{column}_{days}d" for column in ("chuva_mm", "temperatura_media") for days in (0, 7, 14, 21, 28)
         ]
         result = result.merge(climate[climate_columns], on=["data", "weather_lat", "weather_lon"], how="left")
 
@@ -560,7 +561,7 @@ def build_analytical_table(observations, root, data):
             "sem_abastecimento": "sum",
         })
         supply_columns = ["area_id", "data"] + [
-            f"{column}_{days}d" for column in ("horas_abastecimento", "sem_abastecimento") for days in (7, 14, 21, 28)
+            f"{column}_{days}d" for column in ("horas_abastecimento", "sem_abastecimento") for days in (0, 7, 14, 21, 28)
         ]
         result = result.merge(supply[supply_columns], on=["area_id", "data"], how="left")
 
