@@ -74,6 +74,11 @@ desenhado como um hexágono regular centrado na EDL. A referência de 400 m vem
 de ensaios da Fiocruz em Manaus e Manacapuru; ela não representa eficácia
 comprovada das EDLs no Recife. As sensibilidades analíticas incluem 50, 100,
 150, 200, 300, 400 e 500 m.
+A camada `EDLs projetadas` marca, para o raio selecionado, onde novas EDLs
+cobririam as ovitrampas ainda descobertas: um k-center guloso roda no
+navegador a cada mudança do slider e para em 95% de cobertura ou 400 pontos.
+Hoje só 37,7% das 2.843 ovitrampas estão a até 400 m de alguma das 174 EDLs
+válidas, e a mediana da distância é de 526 m.
 A documentação, limitações e confirmações pendentes estão em
 [`docs/gevacz.md`](docs/gevacz.md).
 

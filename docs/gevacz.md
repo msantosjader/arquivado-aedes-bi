@@ -111,6 +111,20 @@ mantida no popup como indicador secundário porque está saturada nos dados
 disponíveis (aproximadamente 98,5%). A análise de exposição usa a distância
 exata e faixas de 0--100, 100--200, 200--300, 300--400, 400--500 e >500 m.
 
+A camada `EDLs projetadas` responde onde novas EDLs cobririam mais ovitrampas.
+Hoje apenas 37,7% das 2.843 ovitrampas estão a até 400 m de alguma das 174
+EDLs válidas; a mediana dessa distância é de 526 m, o percentil 90 é de
+1.937 m e o máximo chega a 4.003 m. A cada mudança do slider `Raio EDL` o
+mapa refaz no navegador um k-center guloso: parte da distância de cada
+ovitrampa até a EDL mais próxima (`distancia_edl_m`, já calculada em
+EPSG:31985), marca como ponto proposto a ovitrampa descoberta mais distante
+e repete até cobrir 95% das ovitrampas ou até 400 pontos. Em 400 m isso
+resulta em 232 pontos. A camada depende do slider, por isso só aparece com a
+camada EDLs marcada, e considera todas as EDLs do cadastro sem filtro de
+data: é uma pergunta de planejamento de rede, não de estado por ciclo. As
+distâncias entre ovitrampas usam uma projeção equirectangular local, com
+erro abaixo de 0,05% frente ao EPSG:31985.
+
 O ano de origem e o ano da data são mantidos separadamente. Datas fora do ano
 do arquivo são comparadas com os registros vizinhos e classificadas em
 `qualidade_data`; as correções de alta confiança ficam registradas na auditoria.

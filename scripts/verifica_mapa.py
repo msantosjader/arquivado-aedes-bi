@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checagem das mudanças do mapa: janela 0, payload H3 e hexágono da EDL.
+"""Checagem das mudanças do mapa: janela 0, payload H3, hexágono e projeção de EDLs.
 
 Uso: uv run python scripts/verifica_mapa.py
 """
@@ -53,7 +53,9 @@ def verifica_html():
     html = path.read_text(encoding="utf-8")
     for needle in ("lagDays=[0,7,14,21,28]", 'id="janela" type="range" min="0" max="4" value="1"',
                    'id="raio-bloco"', "hexEmCima", "DATA.h3_geometries[cell.h3_index]",
-                   "amostraSuficiente", "dia da coleta"):
+                   "amostraSuficiente", "dia da coleta",
+                   'id="edl-proj-visivel"', "const PROJ=", "edlProjLayers",
+                   "projK+' pontos para cobrir '"):
         check(needle in html, f"HTML sem: {needle}")
     for banned in ("edl_buffers", "L.circle([edl.latitude", "H3 (resolução 8)"):
         check(banned not in html, f"HTML ainda contem: {banned}")
