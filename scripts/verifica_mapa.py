@@ -52,13 +52,24 @@ def verifica_html():
         return
     html = path.read_text(encoding="utf-8")
     for needle in ("lagDays=[0,7,14,21,28]", 'id="janela" type="range" min="0" max="4" value="1"',
-                   'id="raio-bloco"', "hexEmCima", "DATA.h3_geometries[cell.h3_index]",
-                   "amostraSuficiente", "dia da coleta",
+                   'id="raio-bloco"', 'id="raio-label">100 m', 'id="raio" type="range" min="0" max="500" value="100" step="10"',
+                   "hexEmCima", "DATA.h3_geometries[cell.h3_index]",
+                   '"observacoes_com_ovos":', "hasEggObservations", "cell.observacoes_com_ovos",
+                   "linear-gradient(90deg,#fff5f0,#67000d)", "500+</span>", "dia da coleta",
                    'id="edl-proj-visivel"', "const PROJ=", "edlProjLayers",
-                   "projK+' pontos para cobrir '",
-                   "hexEmCima(o.latitude,o.longitude,radius)"):
+                   "projK+' pontos cobrem '",
+                   "distancia_edl_exata_m",
+                   "radiusInput.oninput=()=>draw(+timeInput.value)",
+                   "edlProjLayers.length=0", "projCov=n?Math.round(covered/n*1000)/10:0",
+                   "while(true)", "if(c===n)break", "edlProjColor(p.novo,projMaxNovo)",
+                   "linear-gradient(90deg,#ede9fe,#4c1d95)", "projMaxNovo+' novas</span>",
+                   "hexEmCima(o.latitude,o.longitude,radius)",
+                   "color:projectedColor,fillColor:projectedColor,fillOpacity:.2,weight:1",
+                   "Ganho marginal: mais ovitrampas novas por ponto"):
         check(needle in html, f"HTML sem: {needle}")
-    for banned in ("edl_buffers", "L.circle([edl.latitude", "H3 (resolução 8)"):
+    for banned in ("edl_buffers", "L.circle([edl.latitude", "H3 (resolução 8)",
+                   "amostraSuficiente", "Number(cell.observacoes)>=5", "Math.log1p(1000)",
+                   "idx.length<400", "c/n>=.95", "400 pontos"):
         check(banned not in html, f"HTML ainda contem: {banned}")
     check('"resolucao_h3":8' not in html, "HTML contem celulas H3 de resolucao 8")
     check(html.count('"resolucao_h3":9') > 0, "HTML sem celulas H3 de resolucao 9")

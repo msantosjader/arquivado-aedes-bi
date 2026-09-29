@@ -79,23 +79,25 @@ anterior ou igual à coleta; as colunas `edl_ativa_a_*` representam essas faixas
 ## Camada H3
 
 `gevacz.py` gera `observacoes_h3.parquet` com agregações por célula H3, ano e
-ciclo, nas resoluções 8 e 9. A tabela contém observações, ovitrampas, ovos,
-positividade, médias e mediana de ovos, contexto EDL, chuva, temperatura e
-abastecimento quando esses campos existem na base analítica.
+ciclo, nas resoluções 8 e 9. A tabela contém observações, contagens válidas de
+ovos (`observacoes_com_ovos`), ovitrampas, ovos, positividade, médias e mediana
+de ovos, contexto EDL, chuva, temperatura e abastecimento quando esses campos
+existem na base analítica. `ovos_media` inclui zeros observados, ignora valores
+ausentes e mede a média por contagem válida.
 
 Também é gerado `h3_diagnostico.parquet`, com quantidade de células, média e
 mediana de observações por célula e proporção de células com menos de cinco
-observações. Esse diagnóstico documenta o custo de trocar entre resolução 8 e
-9; o mapa assumiu a 9 e usa cinza para as células com menos de cinco
-observações.
+observações. Esse diagnóstico documenta a esparsidade por resolução; o corte
+de cinco é descritivo e não é mais usado para esconder cores no mapa.
 
 Na execução atual, incluindo pontos até 500 m da fronteira e pontos sem área
-COMPESA, a resolução 8 produziu 9.727 células e 19,9% delas tinham menos de
-cinco observações. A resolução 9 produziu 45.365 células e 88,0% tinham menos
-de cinco observações. O mapa usa a resolução 9, escolhida pelo maior detalhe
-espacial; para conter a instabilidade, células com menos de cinco observações
-são pintadas de cinza e a cor só aparece onde há amostra. A resolução 8
-permanece no parquet como referência de sensibilidade.
+COMPESA, a resolução 8 produziu 9.969 células e 21,7% delas tinham menos de
+cinco observações. A resolução 9 produziu 45.835 células e 88,0% tinham menos
+de cinco observações; 42.415 (92,5%) têm ao menos uma contagem válida de ovos.
+O mapa usa a resolução 9, escolhida pelo maior detalhe espacial; somente
+células sem contagem válida ficam cinzas. A quantidade de contagens válidas é
+mostrada no popup para que a média seja lida junto com o suporte amostral. A
+resolução 8 permanece no parquet como referência de sensibilidade.
 
 O H3 é uma camada de agregação e indexação. As distâncias EDL continuam sendo
 calculadas em metros no sistema EPSG:31985 antes da agregação, sem substituir a
@@ -106,25 +108,37 @@ desenha um hexágono regular centrado em cada EDL, com o raio do slider
 `Raio EDL` (218 m reproduzem o módulo da resolução 9). O hexágono é apenas
 visual, segue a distância circular até a EDL mais próxima e pode se sobrepor
 ao de EDLs vizinhas; ele não é uma célula de análise. A camada do mapa usa
-`ovos_media` em escala logarítmica como intensidade principal; positividade é
-mantida no popup como indicador secundário porque está saturada nos dados
-disponíveis (aproximadamente 98,5%). A análise de exposição usa a distância
-exata e faixas de 0--100, 100--200, 200--300, 300--400, 400--500 e >500 m.
+`ovos_media` como intensidade principal; positividade é mantida no popup como
+indicador secundário porque está saturada nos dados disponíveis
+(aproximadamente 98,5%). A cor usa uma escala linear e fixa de 0 a 500 ovos
+médios por contagem, do vermelho muito claro ao vermelho escuro;
+valores maiores que 500 saturam na cor máxima. Esse teto fica próximo do
+percentil 95 da distribuição atual (530 ovos). A legenda mostra 0, 100, 250 e
+500+. Manter o mesmo limite entre ciclos permite comparar cores no tempo. A
+análise de exposição usa a distância exata e faixas de 0--100, 100--200,
+200--300, 300--400, 400--500 e >500 m.
 
 A camada `EDLs projetadas` responde onde novas EDLs cobririam mais ovitrampas.
 Hoje apenas 37,7% das 2.843 ovitrampas estão a até 400 m de alguma das 174
 EDLs válidas; a mediana dessa distância é de 526 m, o percentil 90 é de
 1.937 m e o máximo chega a 4.003 m. A cada mudança do slider `Raio EDL` o
 mapa refaz no navegador um k-center guloso: parte da distância de cada
-ovitrampa até a EDL mais próxima (`distancia_edl_m`, já calculada em
-EPSG:31985), marca como ponto proposto a ovitrampa descoberta mais distante
-e repete até cobrir 95% das ovitrampas ou até 400 pontos. Em 400 m isso
-resulta em 232 pontos. Cada ponto recebe um marcador e um hexágono roxo
-tracejado com o mesmo raio do slider, no mesmo desenho do hexágono laranja
-das EDLs existentes: o contorno é uma aproximação da cobertura circular,
-exatamente como o hexágono real. A camada depende do slider, por isso só aparece com a
-camada EDLs marcada, e considera todas as EDLs do cadastro sem filtro de
-data: é uma pergunta de planejamento de rede, não de estado por ciclo. As
+ovitrampa até a EDL mais próxima (`distancia_edl_exata_m`, calculada em
+EPSG:31985 sem arredondamento), marca como ponto proposto a ovitrampa
+descoberta mais distante e repete até cobrir todas as ovitrampas, sem teto
+artificial de propostas.
+Como os pontos candidatos são as localizações das 2.843 ovitrampas, a lista é
+finita. Com os dados atuais são necessárias 2.827 propostas a 0 m, 2.274 a
+100 m, 1.058 a 200 m, 545 a 300 m, 314 a 400 m e 202 a 500 m. Cada ponto
+recebe um marcador roxo tracejado e um hexágono roxo preenchido com o mesmo
+raio do slider e o mesmo desenho dos hexágonos laranja das EDLs existentes:
+o contorno é uma aproximação da cobertura circular, como nos hexágonos reais.
+Do lilás ao roxo escuro, a cor representa quantas ovitrampas novas cada
+proposta cobre em relação às EDLs existentes e às propostas anteriores; a
+legenda atualiza o intervalo para o raio selecionado. A camada depende do
+slider, por isso só aparece com a camada EDLs marcada, e considera todas as
+EDLs do cadastro sem filtro de data:
+é uma pergunta de planejamento de rede, não de estado por ciclo. As
 distâncias entre ovitrampas usam uma projeção equirectangular local, com
 erro abaixo de 0,05% frente ao EPSG:31985.
 
@@ -161,7 +175,7 @@ na tabela normalizada, mas não entram na linha do tempo do mapa até validaçã
 ## Cobertura espacial provisória
 
 O mapa permite selecionar um raio de 0 a 500 m para a área operacional
-presumida, com 400 m como valor padrão. Esse valor é informado por material
+presumida, com 100 m como valor inicial. A referência de 400 m vem de material
 da Fiocruz que relata disseminação efetiva até 400 m em ensaios realizados em
 Manaus e Manacapuru (Abad-Franch et al., 2015; 2017). Isso não comprova
 eficácia local no Recife.
